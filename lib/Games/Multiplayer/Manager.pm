@@ -3,7 +3,7 @@ package Games::Multiplayer::Manager;
 use strict;
 use warnings;
 
-our $VERSION = '1.00';
+our $VERSION = '1.01';
 
 sub new {
 	my $proto = shift;
@@ -180,7 +180,6 @@ sub listGames {
 	# Get a list of all the games.
 	my @list = keys %{$self->{_games}};
 
-	return 0 unless scalar(@list) > 0;
 	return @list;
 }
 
@@ -252,7 +251,6 @@ sub findPlayer {
 	}
 
 	# Return the array of game ID's.
-	return 0 unless scalar(@games) > 0;
 	return @games;
 }
 
@@ -272,18 +270,17 @@ sub listPlayers {
 	# ID must be defined.
 	if (length $id == 0) {
 		$self->debug ("Could not list players: ID not passed in!");
-		return 0;
+		return undef;
 	}
 
 	# ID must exist.
 	if (!exists $self->{_games}->{$id}) {
 		$self->debug ("Could not list players: Game $id doesn't exist!");
-		return 0;
+		return undef;
 	}
 
 	# Get the players.
 	my @list = keys %{$self->{_games}->{$id}->{_players}};
-	return 0 unless scalar(@list) > 0;
 	return @list;
 }
 
@@ -305,10 +302,10 @@ interactive environments.
   # Set up broadcast handler.
   $game->setHandler (broadcast => sub {
     my $self = shift;
-    print "Got message for $self->{to}: $self->{msg}\n\n";
+    print "Got message for $self->{to}: $self->{message}\n\n";
   });
 
-  # Add a game and a player.
+  # Create a new game.
   $game->create (
     id   => "tag",
     name => "The Game of Tag",
@@ -339,13 +336,13 @@ Create a new game manager. This method should be called only once (a single mana
 object can manage as many games as you need). You can also pass in default variables
 (try to avoid any that begin with an underscore).
 
-	my $manager = new Games::Multiplayer::Manager (debug => 1);
+  my $manager = new Games::Multiplayer::Manager (debug => 1);
 
 =head2 version
 
 Returns the module's version.
 
-	my $version = $manager->version;
+  my $version = $manager->version;
 
 =head2 create
 
@@ -359,10 +356,10 @@ method with the same ID that you created the game with.
 This method will return 0 if there was an error (most likely the ID was already in
 use by another game).
 
-	$manager->create (
-		id   => "tag",
-		name => "The Game of Tag",
-	);
+  $manager->create (
+    id   => "tag",
+    name => "The Game of Tag",
+  );
 
 =head2 destroy
 
@@ -372,31 +369,31 @@ existing players out of the game. If that is true, another argument "alert" shou
 be provided to define whether or not the players should be told about the game being
 terminated. You can also pass a "message" to be broadcasted to those players.
 
-	$manager->destroy (
-		id      => "tag",
-		force   => 1,
-		message => "Game terminated by an administrator.",
-		alert   => 1,
-	);
+  $manager->destroy (
+    id      => "tag",
+    force   => 1,
+    message => "Game terminated by an administrator.",
+    alert   => 1,
+  );
 
 =head2 setHandler
 
 Set a handler. Currently the only handler is for "broadcast" - your handler sub would
 receive a hash containing "to" and "message"
 
-	$manager->setHandler (broadcast => \&broadcast);
+  $manager->setHandler (broadcast => \&broadcast);
 
 =head2 sendMessage
 
 Send a message to a single person. This method is usually called from within the module.
 
-	$manager->sendMessage (to => "foo", message => "Hello!");
+  $manager->sendMessage (to => "foo", message => "Hello!");
 
 =head2 broadcast
 
 Send a message to all players in a given Game ID.
 
-	$manager->broadcast ("tag", "Soandso has been tagged!");
+  $manager->broadcast ("tag", "Soandso has been tagged!");
 
 =head1 GAME METHODS
 
@@ -405,14 +402,13 @@ Send a message to all players in a given Game ID.
 Check a game's existence. Pass in the Game ID. This method will return 1 if the game
 exists, or 0 if it does not.
 
-	my $exists = $manager->queryGame ("tag");
+  my $exists = $manager->queryGame ("tag");
 
 =head2 listGames
 
 Returns an array of every Game ID that is currently in existence under this manager.
-It will return 0 if there are no games.
 
-	my @games = $manager->listGames;
+  my @games = $manager->listGames;
 
 =head1 PLAYER METHODS
 
@@ -421,38 +417,51 @@ It will return 0 if there are no games.
 Add a player to an already created game. The first parameter is the Game ID, followed
 by a hash that must contain (at least) a unique name for the player.
 
-	$manager->addPlayer ("tag",
-		name => "foo",
-	);
+  $manager->addPlayer ("tag",
+    name => "foo",
+  );
 
 =head2 dropPlayer
 
 Remove a player from a game. The game ID must exist, and a name must be defined.
 
-	$manager->dropPlayer ("tag", "foo");
+  $manager->dropPlayer ("tag", "foo");
 
 =head2 findPlayer
 
 Searches every existing game for a certain player. This method returns an array of each
 Game ID that the player exists in.
 
-	my @ids = $manager->findPlayer ("foo");
+  my @ids = $manager->findPlayer ("foo");
 
 =head2 queryPlayer
 
 Check a player's existence within a game. Returns true if they exist there.
 
-	my $exists = $manager->queryPlayer ("tag", "foo");
+  my $exists = $manager->queryPlayer ("tag", "foo");
 
 =head2 listPlayers
 
 Returns an array of players that exist in the passed in Game ID.
 
-	my @players = $manager->listPlayers ("tag");
+  my @players = $manager->listPlayers ("tag");
 
 =head1 SEE ALSO
 
 Nothing else to see at the moment.
+
+=head1 CHANGES
+
+  Version 1.01
+  - Fixed a few bugs with arrays being returned by the module. It used to return "0"
+    when the array would've been empty, causing $array[0] = 0. This has been fixed.
+    empty arrays return empty now.
+  - Revised the module page. The broadcast handler receives "to" and "message" as
+    the hash keys, not "msg".
+  - Fixed the test script; Makefile should install more smoothly now.
+
+  Version 1.00
+  - Initial release.
 
 =head1 AUTHOR
 
@@ -460,22 +469,22 @@ Cerone Kirsle, E<lt>cerone@aichaos.comE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Games::Multiplayer::Manager - Multiplayer game management for interactive environments.
-Copyright (C) 2005  Cerone Kirsle
+  Games::Multiplayer::Manager - Multiplayer game management for interactive environments.
+  Copyright (C) 2005  Cerone Kirsle
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
 =cut
